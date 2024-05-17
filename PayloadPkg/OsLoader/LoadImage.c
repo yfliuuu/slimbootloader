@@ -286,8 +286,16 @@ GetBootImageFromFs (
 
   FsHandle = NULL;
   FileHandle = NULL;
-  SwPart = BootOption->Image[LoadedImage->LoadImageType].FileImage.SwPart;
-  FsType = BootOption->Image[LoadedImage->LoadImageType].FileImage.FsType;
+
+  if ((BootOption->BootFlags & BOOT_FLAGS_MENDER) == 0) {
+    SwPart = BootOption->Image[LoadedImage->LoadImageType].FileImage.SwPart;
+    FsType = BootOption->Image[LoadedImage->LoadImageType].FileImage.FsType;
+  } else {
+    /* Mender SwPart are always SwPart 1 (primary) or 2 (secondary) */
+    SwPart = 0x1;
+    /* Mender A/B parts are always the ext2 */
+    FsType = EnumFileSystemTypeExt2;
+  }
 
   //
   // The image_B partition number, is image_A partition number + 1
@@ -295,6 +303,10 @@ GetBootImageFromFs (
   //
   if ((BootOption->BootFlags & LOAD_IMAGE_FROM_BACKUP) != 0) {
     SwPart++;
+  }
+
+  if ((BootOption->BootFlags & BOOT_FLAGS_MENDER) != 0) {
+    DEBUG((DEBUG_INFO, "Mender BootFlag enabled: overriding SwPart to %x, FsType to %x\n", SwPart, FsType));
   }
 
   Status = InitFileSystem (SwPart, FsType, HwPartHandle, &FsHandle);
